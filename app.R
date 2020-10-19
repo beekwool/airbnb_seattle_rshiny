@@ -1,9 +1,12 @@
+#library ####
 library(shiny)
-library(shinydashboard)
-library(googleVis)
-#install.packages(plotly)
-library(plotly)
-library(DT)
+library(data.table)
+library(lubridate)
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(tidyr)
+# library(plotly)
 
 # state_stat=data.frame(state.name=rownames(state.x77), state.x77)
 # rownames(state_stat)=NULL
@@ -13,28 +16,8 @@ library(DT)
 
 #monthly total unique listings
 
-#Listing vacancy by day
-listing_by_day = arbnb.raw %>% 
-  mutate(year = year(date), 
-         month = month(date),
-         day_of_year = yday(date),
-         price = as.numeric(price)) %>% 
-  filter(!is.na(price), year == 2020) %>% 
-  group_by(day_of_year, 
-           available) %>% 
-  summarise(list_cnt = n()) %>% 
-  filter(available == TRUE)
-
-
-ggplot(listing_by_day, aes(day_of_year, list_cnt)) +
-  geom_freqpoly(stat='identity') +
-  #  coord_cartesian(xlim=c(1,12)) +
-  labs(title='Count of Vacant Listing by day in Seattle', x='Day', y='Listings') +
-  #scale_x_continuous(breaks = 1:12) +
-  theme_bw() 
-
-choice =  colnames(arbnb_list)
-
+#data import####
+listing_detail_profit = read_csv('ListingDetailProfit.csv')
 
 
 # ui ####
@@ -51,9 +34,8 @@ ui=fluidPage(
           menuItem('Obervation',tabName = 'obv',icon=icon('chart-bar')),
           menuItem('Exploritory Visual',tabName = 'explore',icon=icon('globe-americas')),  
           menuItem('Data',tabName = 'data',icon=icon('database'))  
-      ),
-      selectizeInput('selected','Select Item to Display',
-                     choices=choice)
+      ) 
+   
     ),
     dashboardBody(
       tabItems(
@@ -77,10 +59,44 @@ ui=fluidPage(
                 fluidRow( plotlyOutput("vacant"))),
         
         tabItem(tabName = 'explore',
-              fluidRow( plotlyOutput("vacant"))),
+              fluidRow(
+                        fluidRow(
+                          infoBoxOutput('max')
+                          # infoBoxOutput('minBox'),
+                          # infoBoxOutput('avgBox')
+                        ),
+                #         fluidRow(
+                #           box(htmlOutput('hist'),height = 300),
+                #           box(htmlOutput('map'),height = 300)
+                #         )
+                #titlePanel("NYC Flights 2014"),
+                sidebarLayout(
+                  sidebarPanel = sidebarPanel(
+
+                    selectizeInput(inputId = "neighborhood",
+                                   label = "Neighborhood",
+                                   choices = unique(listing_detail_profit$neighbourhood_group_cleansed)),
+                    
+                    # verbatimTextOutput("value")
+                    
+                    selectizeInput(inputId = "prop_type",
+                                   label = "Property Type",
+                                   choices = NULL)
+                    
+                  ),
+                  mainPanel = mainPanel(
+                    plotOutput("neighborhoodProf")
+                  )
+                  
+              )
+            )
+        ),
 
         tabItem(tabName = 'data',
-              fluidRow(box(dataTableOutput('table'),width=12)))
+              'tbd data table'
+                # fluidRow(box(dataTableOutput('table'),width=12))
+              
+              )
         
 
         
@@ -91,53 +107,41 @@ ui=fluidPage(
 )
 
 
-
-
-# server ####
-server=function(input,output){
+# Server ####
+server=function(input, output, session){
   
-  output$hist=renderGvis({
-    gvisHistogram(state_stat[,input$selected,drop=FALSE])
+  
+  observeEvent(input$neighborhood, {
+    choices = unique(listing_detail_profit$property_type[listing_detail_profit$neighbourhood_group_cleansed == input$neighborhood])
+    updateSelectizeInput(session, inputId = "prop_type", choices = choices)
   })
   
-  # output$map <- renderGvis(
-  #   {gvisGeoChart(state_stat, "state.name", input$selected,
-  #                 options=list(region="US", displayMode="regions", 
-  #                              resolution="provinces",
-  #                              width="auto", height="auto"))}
-  # )
-  # 
-  # output$table=renderDataTable(
-  #   datatable(arbnb_list) %>% 
-  #     formatStyle(input$selected,
-  #                 background="skyblue", 
-  #                 fontWeight='bold')
-  # )
-  # 
-  output$vacant=renderPlotly(
-    ggplotly(
-      {ggplot(listing_by_day, aes(day_of_year, list_cnt)) +
-          geom_freqpoly(stat='identity') +
-          #  coord_cartesian(xlim=c(1,12)) +
-          labs(title='Count of Vacant Listing by day in Seattle', x='Day', y='Listings') +
-          #scale_x_continuous(breaks = 1:12) +
-          theme_bw()},
-      tooltip='text'
-    )
+  output$neighborhoodProf=renderPlot(
+      {listing_detail_profit %>% 
+          filter(neighbourhood_group_cleansed == input$neighborhood) %>% 
+          group_by(neighbourhood_group_cleansed) %>% 
+          summarise(avg_profit = mean(profit)) %>% 
+          ggplot(aes(reorder(neighbourhood_group_cleansed, avg_profit), avg_profit)) + 
+          geom_bar(stat = 'identity') +
+          labs(title='Neighborhood Profitability', x='Neighborhood', y='Average Profit') +
+          coord_flip() +
+          theme_bw()} 
   )
+
   
   
   output$max=renderInfoBox({
-    max_value <- max(state_stat[,input$selected])
-    max_state <- 
-      state_stat$state.name[state_stat[,input$selected]==max_value]
-    infoBox(max_state,max_value,icon=icon('hand-o-up'))
+    max_value = max(listing_detail_profit$accommodates[listing_detail_profit$neighbourhood_group_cleansed == input$neighborhood])
+    # max_state <- 
+    #   state_stat$state.name[state_stat[,input$selected]==max_value]
+    # infoBox(max_state,max_value,icon=icon('hand-o-up'))
+    infoBox("Max Accomodation", max_value, icon=icon('hand-o-up'))
   })
   
   output$minBox <- renderInfoBox({
-    min_value <- min(state_stat[,input$selected])
-    min_state <- 
-      state_stat$state.name[state_stat[,input$selected]==min_value]
+    min_value <- min(state_stat[,input$neighborhood])
+    # min_state <- 
+    #   state_stat$state.name[state_stat[,input$selected]==min_value]
     infoBox(min_state, min_value, icon = icon("hand-o-down"))
   })
   
