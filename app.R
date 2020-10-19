@@ -35,7 +35,7 @@ ui=fluidPage(
           menuItem('Exploritory Visual',tabName = 'explore',icon=icon('globe-americas')),  
           menuItem('Data',tabName = 'data',icon=icon('database'))  
       ) 
-   
+    
     ),
     dashboardBody(
       tabItems(
