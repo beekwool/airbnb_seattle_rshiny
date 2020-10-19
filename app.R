@@ -54,7 +54,8 @@ ui=fluidPage(
                       h4("This Shiny app aims to provide Arbnb hosts in Seattle a tool to discover how 
                          their listings compare to similar listings in Seattle."),
                       h3("Data in scope:"),
-                      h4("Listings with a review at least within six months of data gathering"),
+                      h4("1. Listings with a review at least within six months of data gathering"),
+                      h4("2. Date range is June 2020 - November 2020"),
                       h3("Note on listing profit:"),
                       h4("1. Arbnb doesn not differenciate date booked by customers or date blocked out by hosts,
                          therefore the profit listed here would be an over estimation of actual gains by hosts."),
@@ -82,9 +83,20 @@ ui=fluidPage(
                   plotOutput("profdiff"),
                   
                   sliderInput("slider", label = h3("Profit Bin Size"), min = 0, 
-                              max = 100, value = 4)
+                              max = 100, value = 4),
                   
-                  
+                  h4("By improving their listings, hosts could potentially increase their profits significantly"),
+                  h4("Many factors were considered to see its incluence in profitability:"),
+                  h4("Price: the higher, the more profitable"),
+                  h4("Response time: only hosts under responding 'a few days or more' have lower profit"),
+                  h4("Response rate: strangely higher response rate does not contribute to higher profit"),
+                  h4("Super host or not: there is no obvious difference in profitability being a super host"),
+                  h4("Property type: in-laws and houseboats have the highest profitability"),
+                  h4("Room type: not considering hotels, entire home/apartment has the highest profitability"),
+                  h4("Bedroom type: 4,5,8 bedrooms are the most profitable comparibly"),
+                  h4("Minimum nights: monthly/yearly are the most profitable, but considering <7 days, 4 days profits most"),
+                  h4("Cancellation policy: the stricker, the more profitable"),
+                  h4("Rating: not very obvious difference in profitability")
                 )),
 #explore ####
         tabItem(tabName = 'explore',
